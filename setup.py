@@ -28,9 +28,9 @@ setup(name='multivisor',
       install_requires=requires,
       tests_require=requires,
       test_suite="multivisor",
-      entry_points = """\
-      [paste.app_factory]
-      app = multivisor.run:app
-      """
+      entry_points = {
+      'paste.app_factory': ['app = multivisor.run:app'],
+      'console_scripts': ['mv-listener = multivisor.listener:main']
+      }
       )
 

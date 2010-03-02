@@ -1,9 +1,12 @@
 *.pyc
 .idea
 *~
+.installed.cfg
 bin
 eggs
 develop-eggs
 parts
 *.egg-info
-
+.coverage
+cover
+*,cover
