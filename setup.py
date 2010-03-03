@@ -30,7 +30,10 @@ setup(name='multivisor',
       test_suite="multivisor",
       entry_points = {
       'paste.app_factory': ['app = multivisor.run:app'],
-      'console_scripts': ['mv-listener = multivisor.listener:main']
+      'console_scripts': [
+              'mv-listener = multivisor.listener:supervisor_events',
+              'amqp-listener = multivisor.listener:amqp_events',
+              ]
       }
       )
 
