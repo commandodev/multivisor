@@ -1,66 +1,109 @@
 from eventlet import patcher
-amqp = patcher.import_patched('amqplib.client_0_8')
-import eventlet
-import sys
-import logging
+import os
+childutils = patcher.import_patched('supervisor.childutils')
+from multivisor.amqp import connect_to_amqp, EXCHANGE, amqplib
+from json import dumps
 from pprint import pformat
+import logging
+import os
+import sys
 
-EXCHANGE='example'
-HOST = 'localhost'
-QNAME = 'supervisor'
+logging.basicConfig(filename='/tmp/listener.log', level=logging.INFO)
 
-def amqp_callback(msg):
-    msg.channel.basic_ack(msg.delivery_tag)
-    print "Got message", msg.routing_key, msg.body
+class WrongEventType(TypeError):
+    """An exception for an :class:`EventParser` trying to process the wrong supervisor event"""
 
-def connect_to_amqp(hostname=HOST, exchange=EXCHANGE, qname=QNAME):
-    conn = amqp.Connection(hostname, userid='guest', password='guest', ssl=False, insist=True)
-    ch = conn.channel()
-    ch.access_request('/data', active=True, read=True)
-    ch.exchange_declare(exchange, 'topic', auto_delete=True, durable=False)
-    qname, _, _ = ch.queue_declare(qname, auto_delete=True, durable=False)
-    return ch
+class EventParser(object):
+    """Base class for handling supervisor events"""
+
+    PROTOCOL = childutils.EventListenerProtocol()
+    #: The ``delivery_mode`` of messages (1 == Non persistent)
+    DELIVERY_MODE = 1
+    #: Message content_type
+    CONTENT_TYPE = 'application/json'
+    log = logging.getLogger('listener')
+
+    def __init__(self, amqp_host, exchange, routing_key, stdin=sys.stdin, stdout=sys.stdout):
+        self.amqp_host = amqp_host
+        self.exchange = exchange
+        self.routing_key = routing_key
+        self.stdin = stdin
+        self.stdout = stdout
+        self.rpc = self._get_rpc()
+        self.channel = connect_to_amqp(amqp_host, exchange)
+
+    def _get_rpc(self, env=os.environ):
+        return childutils.getRPCInterface(env)
+
+    def ready(self):
+        self.PROTOCOL.ready(self.stdout)
+
+    def ok(self):
+        self.PROTOCOL.ok(self.stdout)
+
+    def wait(self):
+        headers, payload =  self.PROTOCOL.wait(self.stdin, self.stdout)
+        return headers, childutils.get_headers(payload)
+
+    def augment_payload(self, headers, payload):
+        """Add any additional information to payload
+
+        :param payload: The body of the parsed supervisor message
+        :type payload: dict
+        """
+        pass
+
+    def dispatch_message(self, message_body, content_type=None):
+        if not content_type:
+            content_type = self.CONTENT_TYPE
+        msg = amqplib.Message(dumps(message_body), content_type=content_type)
+        self.channel.basic_publish(msg, self.exchange, self.routing_key)
+
+    def run(self, test=False):
+        self.log.debug('run')
+        while 1:
+            sys.stderr.write('tick')
+            headers, payload = self.wait()
+            sys.stderr.write('headers: %s payload: %s' % (headers, payload))
+            self.augment_payload(headers, payload)
+            sys.stderr.write('augmented: %s' % payload)
+            try:
+                self.dispatch_message(payload)
+            except:
+                self.log.exception()
+            sys.stderr.flush()
+            self.ok()
+            if test:
+                break
 
 
-def amqp_events(keys=['procs.*'], qname=QNAME):
-    ch = connect_to_amqp()
-    for key in keys:
-        ch.queue_bind(qname, EXCHANGE, key)
-    ch.basic_consume(qname, callback=amqp_callback)
-    while ch.callbacks:
-        ch.wait()
+class Tick5Parser(EventParser):
+
+    def augment_payload(self, headers, payload):
+        super(Tick5Parser, self).augment_payload(headers, payload)
+        all_procs = self.rpc.supervisor.getAllProcessInfo()
+        self.log.info(all_procs)
+        update_dict = {}
+        for proc in all_procs:
+            process_name = proc.pop('name')
+            update_dict[process_name] = proc
+        payload.update(update_dict)
 
 
-#logging.basicConfig(filename='/tmp/listener.log', level=logging.DEBUG,
-#                    format='%(name)s %(message)s')
-#log = logging.getLogger('listener')
 
-def write_stdout(s):
-    sys.stdout.write(s)
-    sys.stdout.flush()
 
-def write_stderr(s):
-    sys.stderr.write(s)
-    sys.stderr.flush()
+
+
 
 def supervisor_events():
-    ch = connect_to_amqp()
-
-    while 1:
-        write_stdout('READY\n') # transition from ACKNOWLEDGED to READY
-        line = sys.stdin.readline()  # read header line from stdin
-        write_stderr(line) # print it out to stderr
-        headers = dict([ x.split(':') for x in line.split() ])
-        header_msg = amqp.Message(pformat(headers),
-                                  content_type='text/plain', application_headers=headers)
-        data = sys.stdin.read(int(headers['len'])) # read the event payload
-        log_data = dict([ x.split(':') for x in data.split() ])
-        write_stderr(data) # print the event payload to stderr
-        data_msg = amqp.Message(pformat(log_data),
-                                content_type='text/plain', application_headers=log_data)
-        ch.basic_publish(header_msg, EXCHANGE, routing_key='procs.headers')
-        ch.basic_publish(data_msg, EXCHANGE, routing_key='procs.data')
-        write_stdout('RESULT 2\nOK') # transition from READY to ACKNOWLEDGED
+    log = logging.getLogger('runner')
+    log.debug('command')
+    try:
+        parser = Tick5Parser('localhost', EXCHANGE, 'procs.tick')
+#        import pdb; pdb.set_trace()
+        parser.run()
+    except Exception, e:
+        log.exception(e)
 
 if __name__ == '__main__':
     supervisor_events()

@@ -6,7 +6,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.txt')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 
-requires = ['repoze.bfg']
+requires = ['repoze.bfg', 'supervisor', 'amqplib', 'eventlet']
 
 setup(name='multivisor',
       version='0.0',
@@ -23,6 +23,7 @@ setup(name='multivisor',
       url='',
       keywords='web wsgi bfg',
       packages=find_packages(),
+      py_modules=['baker'],
       include_package_data=True,
       zip_safe=False,
       install_requires=requires,
@@ -32,7 +33,7 @@ setup(name='multivisor',
       'paste.app_factory': ['app = multivisor.run:app'],
       'console_scripts': [
               'mv-listener = multivisor.listener:supervisor_events',
-              'amqp-listener = multivisor.listener:amqp_events',
+              'amqp = multivisor.amqp.commands:main',
               ]
       }
       )
