@@ -3,6 +3,7 @@
 *~
 .installed.cfg
 bin
+deps
 eggs
 develop-eggs
 parts
