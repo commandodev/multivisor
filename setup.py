@@ -6,7 +6,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.txt')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 
-requires = ['repoze.bfg', 'supervisor', 'amqplib', 'eventlet']
+requires = ['repoze.bfg', 'supervisor', 'amqplib', 'eventlet', 'repoze.bfg.jinja2', 'psutil', 'psi']
 
 setup(name='multivisor',
       version='0.0',
@@ -30,7 +30,9 @@ setup(name='multivisor',
       tests_require=requires,
       test_suite="multivisor",
       entry_points = {
-      'paste.app_factory': ['app = multivisor.run:app'],
+      'paste.app_factory': ['app = multivisor.run:app',
+                            'websocket = multivisor.server.factory:websocket_app_factory'],
+      'paste.server_factory': ['eventlet_server = multivisor.server.factory:server_factory'],
       'console_scripts': [
               'mv-listener = multivisor.listener:supervisor_events',
               'amqp = multivisor.amqp.commands:main',

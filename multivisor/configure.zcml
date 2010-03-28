@@ -2,16 +2,32 @@
 
   <!-- this must be included for the view declarations to work -->
   <include package="repoze.bfg.includes" />
+  <include package="repoze.bfg.jinja2"/>
+  <include package="zope.component" file="meta.zcml" />
+    
+  <subscriber for="repoze.bfg.interfaces.INewRequest"
+              handler=".adapters.check_for_websocket" />
+
+  <renderer
+     factory="repoze.bfg.jinja2.bindings.renderer_factory"
+     name=".html"
+     />
 
   <view
-     context=".models.MyModel"
+     context=".models.Root"
      view=".views.my_view"
-     renderer="templates/mytemplate.pt"
+     renderer="templates/mytemplate.html"
+     />
+
+  <view
+     context=".models.Root"
+     view=".run.ws_view"
+     request_type='.interfaces.IWebsocketRequest'
      />
 
   <static
-     name="static"
-     path="templates/static"
+     name="media"
+     path="../media"
      />
 
 </configure>
