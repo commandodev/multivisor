@@ -1,17 +1,41 @@
+from eventlet.wsgi import ALREADY_HANDLED
 from repoze.bfg.configuration import Configurator
 from multivisor.models import get_root
+from multivisor.server.websocket import WebSocketView
 from webob.response import Response
 from werkzeug import DebuggedApplication
-from eventlet import sleep
 from werkzeug.debug import DebuggedApplication
 
+import eventlet
+import random
+
+from pprint import pformat
 count = 0
+
+class EchoWebsocket(WebSocketView):
+
+    def handler(self, ws):
+
+        while True:
+            m = ws.wait()
+#            import ipdb; ipdb.set_trace()
+            if m is None:
+                break
+            ws.send('%s says %s (env %s)' % (ws.origin, m, pformat(ws.environ)))
+
+class PlotWebsocket(WebSocketView):
+
+    def handler(self, ws):
+        for i in xrange(10000):
+            ws.send("0 %s %s\n" % (i, random.random()))
+            eventlet.sleep(0.1)
 
 def ws_view(request):
     global count
-    sleep(1)
+    eventlet.sleep(1)
     count += 1
     return Response('view %s' % count)
+
 
 def app(global_config, **settings):
     """ This function returns a WSGI application.
@@ -24,4 +48,7 @@ def app(global_config, **settings):
     config.begin()
     config.load_zcml(zcml_file)
     config.end()
-    return DebuggedApplication(config.make_wsgi_app(), True)
+    if settings.get('debug', None):
+        return DebuggedApplication(config.make_wsgi_app(), True)
+    else:
+        return config.make_wsgi_app()
