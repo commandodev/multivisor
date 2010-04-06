@@ -16,5 +16,5 @@ class ISupervisorProcess(Interface):
     supervisor = Attribute("""The class:`ISupervisorInstance` this process is running in""")
     state = Attribute("""The current state of this process""")
 
-class IWebsocketRequest(IRequest):
-    """A websocket request has a ``scheme`` of ``'ws'`` or ``'wss'``"""
+class IWebsocketUpgradeRequest(IRequest):
+    """An http request to upgrade to websocket"""

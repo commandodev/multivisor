@@ -8,8 +8,8 @@ http://assorted.svn.sourceforge.net/viewvc/assorted/real-time-plotter/trunk/src/
 <script>
 window.onload = function() {
     var data = {};
-    var s = new WebSocket("ws://localhost:6544/data");
-    s.onopen = function() { 
+    var s = new WebSocket("ws://localhost:6544{{ data }}");
+    s.onopen = function() {
         //alert('open');
         s.send('hi');
     };
@@ -35,8 +35,17 @@ window.onload = function() {
       s.send('');
     s.onclose = function(e){
         console.log(e);
+        };
     };
-    };
+    e = new WebSocket("ws://localhost:6544{{ echo }}")
+
+    e.onmessage = function(e){
+        console.log(e.data);
+        };
+    e.onclose = function(e){
+        console.log(e);
+        };
+
 };
 </script>
 </head>

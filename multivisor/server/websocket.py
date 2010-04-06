@@ -5,140 +5,147 @@ from eventlet import pools
 import eventlet
 from eventlet.common import get_errno
 from eventlet.green import socket
+from webob import Response
+from webob.exc import HTTPException
 from pprint import pformat
 
-class WebSocketWSGI(object):
-    def __init__(self, handler, origin):
-        self.handler = handler
-        self.origin = origin
+from multivisor.interfaces import IWebsocketUpgradeRequest
 
-    def verify_client(self, ws):
+
+class IncorrectlyConfigured(Exception):
+    """Exception to use in place of an assertion error"""
+
+class WebSocketView(object):
+    """A view for handling websockets
+
+    This view handles both the upgrade request and the ongoing socket
+    communiction.
+    """
+
+    def __init__(self, request):
+        self.request = request
+        self.environ = request.environ
+        self.sock = self.environ['eventlet.input'].get_socket()
+
+    def __call__(self):
+        import ipdb;ipdb.set_trace()
+        if IWebsocketUpgradeRequest.providedBy(self.request):
+            return self.handle_upgrade()
+        raise IncorrectlyConfigured("IWebsocketUpgradeRequest is not provided by "
+                                    "this request. Make sure the correct INewRequest "
+                                    "adapter is hooked up")
+
+    def verify_client(self):
         pass
 
-    def __call__(self, environ, start_response):
-        if not (environ['HTTP_CONNECTION'] == 'Upgrade' and
-                environ['HTTP_UPGRADE'] == 'WebSocket'):
-            # need to check a few more things here for true compliance
-            start_response('400 Bad Request', [('Connection','close')])
-            return 'Bad:\n%s' % pformat(environ)
-                    
-        sock = environ['eventlet.input'].get_socket()
-        ws = WebSocket(sock, 
-            environ.get('HTTP_ORIGIN'),
-            environ.get('HTTP_WEBSOCKET_PROTOCOL'),
-            environ.get('PATH_INFO'))
-        self.verify_client(ws)
-        handshake_reply = ("HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
-                           "Upgrade: WebSocket\r\n"
-                           "Connection: Upgrade\r\n"
-                           "WebSocket-Origin: %s\r\n"
-                           "WebSocket-Location: ws://%s%s\r\n\r\n" % (
-                                self.origin,
-                                environ.get('HTTP_HOST'),
-                                ws.path))
-        sock.sendall(handshake_reply)
+    def handler(self, ws):
+        raise NotImplementedError
+
+    def handle_websocket(self, ws):
+        ws = WebSocket(self.sock, self.environ)
+
         try:
             self.handler(ws)
         except socket.error, e:
             if get_errno(e) != errno.EPIPE:
                 raise
-        # use this undocumented feature of eventlet.wsgi to ensure that it
-        # doesn't barf on the fact that we didn't call start_response
-        return wsgi.ALREADY_HANDLED
+        # use this undocumented feature of eventlet.wsgi to close the connection properly
+        resp = Response()
+        resp.app_iter = wsgi.ALREADY_HANDLED
+        return resp
 
-def parse_messages(buf):
-    """ Parses for messages in the buffer *buf*.  It is assumed that
-    the buffer contains the start character for a message, but that it
-    may contain only part of the rest of the message. NOTE: only understands
-    lengthless messages for now.
-    
-    Returns an array of messages, and the buffer remainder that didn't contain 
-    any full messages."""
-    msgs = []
-    end_idx = 0
-    while buf:
-        assert ord(buf[0]) == 0, "Don't understand how to parse this type of message: %r" % buf
-        end_idx = buf.find("\xFF")
-        if end_idx == -1:
-            break
-        msgs.append(buf[1:end_idx].decode('utf-8', 'replace'))
-        buf = buf[end_idx+1:]
-    return msgs, buf
-        
-def format_message(message):
-    # TODO support iterable messages
-    if isinstance(message, unicode):
-        message = message.encode('utf-8')
-    elif not isinstance(message, str):
-        message = str(message)
-    packed = "\x00%s\xFF" % message
-    return packed
-
+    def handle_upgrade(self):
+        if not (self.environ['HTTP_CONNECTION'] == 'Upgrade' and
+                self.environ['HTTP_UPGRADE'] == 'WebSocket'):
+            return HTTPException('Bad:\n%s' % pformat(self.environ), headerlist=[('Connection','close')])
+        sock = self.environ['eventlet.input'].get_socket()
+        handshake_reply = ("HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
+                           "Upgrade: WebSocket\r\n"
+                           "Connection: Upgrade\r\n"
+                           "WebSocket-Origin: %s\r\n"
+                           "WebSocket-Location: ws://%s%s\r\n\r\n" % (
+                                self.request.host_url,
+                                self.request.host, self.request.path_info))
+        sock.sendall(handshake_reply)
+        ws = WebSocket(self.sock, self.environ)
+        return self.handle_websocket(ws)
 
 class WebSocket(object):
-    def __init__(self, sock, origin, protocol, path):
-        self.sock = sock
-        self.origin = origin
-        self.protocol = protocol
-        self.path = path
+    """Handles access to the actual socket"""
+
+    def __init__(self, sock, environ):
+        """
+        :param socket: The eventlet socket
+        :type socket: :class:`eventlet.greenio.GreenSocket`
+        :param environ: The wsgi environment
+        """
+        self.socket = sock
+        self.origin = environ.get('HTTP_ORIGIN')
+        self.protocol = environ.get('HTTP_WEBSOCKET_PROTOCOL')
+        self.path = environ.get('PATH_INFO')
+        self.environ = environ
         self._buf = ""
         self._msgs = collections.deque()
         self._sendlock = pools.TokenPool(1)
+
+    @staticmethod
+    def pack_message(message):
+        """Pack the message inside ``00`` and ``FF``
+
+        As per the dataframing section (5.3) for the websocket spec
+        """
+        if isinstance(message, unicode):
+            message = message.encode('utf-8')
+        elif not isinstance(message, str):
+            message = str(message)
+        packed = "\x00%s\xFF" % message
+        return packed
+
+    def parse_messages(self):
+        """ Parses for messages in the buffer *buf*.  It is assumed that
+        the buffer contains the start character for a message, but that it
+        may contain only part of the rest of the message. NOTE: only understands
+        lengthless messages for now.
+
+        Returns an array of messages, and the buffer remainder that didn't contain
+        any full messages."""
+        msgs = []
+        end_idx = 0
+        buf = self._buf
+        while buf:
+            assert ord(buf[0]) == 0, "Don't understand how to parse this type of message: %r" % buf
+            end_idx = buf.find("\xFF")
+            if end_idx == -1:
+                break
+            msgs.append(buf[1:end_idx].decode('utf-8', 'replace'))
+            buf = buf[end_idx+1:]
+        self._buf = buf
+        return msgs
     
     def send(self, message):
-        packed = format_message(message)
+        """Send a message to the client"""
+        packed = self.pack_message(message)
         # if two greenthreads are trying to send at the same time
         # on the same socket, sendlock prevents interleaving and corruption
         t = self._sendlock.get()
         try:
-            self.sock.sendall(packed)
+            self.socket.sendall(packed)
         finally:
             self._sendlock.put(t)
             
     def wait(self):
+        """Waits for an deserializes messages"""
+
         while not self._msgs:
             # no parsed messages, must mean buf needs more data
-            delta = self.sock.recv(1024)
+            delta = self.socket.recv(1024)
             if delta == '':
                 return None
             self._buf += delta
-            msgs, self._buf = parse_messages(self._buf)
+            msgs = self.parse_messages()
             self._msgs.extend(msgs)
         return self._msgs.popleft()
-        
 
-# demo app
-import os
-import random
-def handle(ws):
-    """  This is the websocket handler function.  Note that we 
-    can dispatch based on path in here, too."""
-    if ws.path == '/echo':
-        while True:
-            m = ws.wait()
-            if m is None:
-                break
-            ws.send(m)
-            
-    elif ws.path == '/data':
-        for i in xrange(10000):
-            ws.send("0 %s %s\n" % (i, random.random()))
-            eventlet.sleep(0.1)
-                            
-wsapp = WebSocketWSGI(handle, 'http://localhost:6544')
-def dispatch(environ, start_response):
-    """ This resolves to the web page or the websocket depending on
-    the path."""
-    if environ['PATH_INFO'] == '/':
-        start_response('200 OK', [('content-type', 'text/html')])
-        return [open(os.path.join(
-                     os.path.dirname(__file__), 
-                     'websocket.html')).read()]
-    else:
-        return wsapp(environ, start_response)
+    def close(self):
+        self.socket.shutdown(True)
 
-        
-if __name__ == "__main__":
-    # run an example app from the command line            
-    listener = eventlet.listen(('localhost', 7000))
-    wsgi.server(listener, dispatch)

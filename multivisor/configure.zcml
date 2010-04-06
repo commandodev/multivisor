@@ -15,15 +15,28 @@
 
   <view
      context=".models.Root"
-     view=".views.my_view"
-     renderer="templates/mytemplate.html"
+     view=".views.ws_entry"
+     renderer="templates/websocket.html"
      />
 
-  <view
-     context=".models.Root"
-     view=".run.ws_view"
-     request_type='.interfaces.IWebsocketRequest'
+    <route
+     path="/echo"
+     name="echo"
+     view=".run.EchoWebsocket"
      />
+
+    <route
+     path="/data"
+     name="data"
+     view=".run.PlotWebsocket"
+     />
+
+
+  <!--<view-->
+     <!--context=".models.Root"-->
+     <!--view=".run.ws_view"-->
+     <!--request_type='.interfaces.IWebsocketSessionRequest'-->
+     <!--/>-->
 
   <static
      name="media"
