@@ -30,8 +30,7 @@ setup(name='multivisor',
       tests_require=requires,
       test_suite="multivisor",
       entry_points = {
-      'paste.app_factory': ['app = multivisor.run:app',
-                            'websocket = multivisor.server.factory:websocket_app_factory'],
+      'paste.app_factory': ['app = multivisor.run:app'],
       'paste.server_factory': ['eventlet_server = multivisor.server.factory:server_factory'],
       'console_scripts': [
               'mv-listener = multivisor.listener:supervisor_events',
