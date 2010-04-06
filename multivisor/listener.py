@@ -80,13 +80,10 @@ class EventParser(object):
         while 1:
             sys.stderr.write('tick')
             headers, payload = self.wait()
-            sys.stderr.write('headers: %s payload: %s' % (headers, payload))
             try:
                 self.process_event(headers, payload)
             except:
                 self.log.exception('oops')
-            else:
-                sys.stderr.write('processed: %s' % payload)
             finally:
                 sys.stderr.flush()
                 self.ok()
