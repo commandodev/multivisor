@@ -5,8 +5,8 @@ from eventlet import pools
 import eventlet
 from eventlet.common import get_errno
 from eventlet.green import socket
-from webob import Response
-from webob.exc import HTTPClientError, HTTPServerError
+from webob import Response, Request
+from webob.exc import HTTPBadRequest, HTTPServerError
 from pprint import pformat
 
 from multivisor.interfaces import IWebsocketUpgradeRequest
@@ -55,9 +55,11 @@ class WebSocketView(object):
         return resp
 
     def handle_upgrade(self):
-        if not (self.environ['HTTP_CONNECTION'] == 'Upgrade' and
-                self.environ['HTTP_UPGRADE'] == 'WebSocket'):
-            return HTTPClientError('Bad:\n%s' % pformat(self.environ), headerlist=[('Connection','close')])
+        if not (self.environ.get('HTTP_CONNECTION') == 'Upgrade' and
+                self.environ.get('HTTP_UPGRADE') == 'WebSocket'):
+            r = HTTPBadRequest(headers=dict(Connection='Close'))
+            r.body = 'Bad:\n%s' % pformat(self.environ)
+            return r
         sock = self.environ['eventlet.input'].get_socket()
         handshake_reply = ("HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
                            "Upgrade: WebSocket\r\n"

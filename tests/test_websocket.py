@@ -1,5 +1,5 @@
 import eventlet
-from eventlet import debug, hubs, Timeout, spawn_n, greenthread, wsgi
+from eventlet import debug, hubs, Timeout, spawn_n, greenthread, wsgi, patcher
 from eventlet.green import urllib2
 from nose.tools import ok_, eq_, set_trace, raises
 from paste import deploy
@@ -21,7 +21,7 @@ from multivisor.server.websocket import WebSocketView
 from repoze.debug.responselogger import ResponseLoggingMiddleware
 from logging import getLogger
 
-
+httplib2 = patcher.import_patched('httplib2')
 
 
 class EchoWebsocket(WebSocketView):
@@ -128,6 +128,36 @@ class LimitedTestCase(TestCase):
         except urllib2.HTTPError, e:
             eq_(e.code, 500)
             raise
+
+    def test_incomplete_headers(self):
+        headers = dict(kv.split(': ') for kv in [
+                "Upgrade: WebSocket",
+                #"Connection: Upgrade", Without this should trigger the HTTPServerError
+                "Host: localhost:%s" % self.port,
+                "Origin: http://localhost:%s" % self.port,
+                "WebSocket-Protocol: ws",
+                ])
+        http = httplib2.Http()
+        resp, content = http.request("http://localhost:%s/echo" % self.port, headers=headers)
+
+        eq_(resp['status'], '400')
+        eq_(resp['connection'], 'Close')
+        ok_(content.startswith('Bad:'))
+#        connect = [
+#                "GET /echo HTTP/1.1",
+#                "Upgrade: WebSocket",
+#                #"Connection: Upgrade", Without this should trigger the HTTPServerError
+#                "Host: localhost:%s" % self.port,
+#                "Origin: http://localhost:%s" % self.port,
+#                "WebSocket-Protocol: ws",
+#                ]
+#        sock = eventlet.connect(
+#            ('localhost', self.port))
+#        fd = sock.makefile('rw', close=True)
+#        fd.write('\r\n'.join(connect) + '\r\n\r\n')
+#        fd.flush()
+#        result = sock.recv(1024)
+#        eq_(result, '')
 
     def test_correct_upgrade_request(self):
         connect = [
