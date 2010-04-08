@@ -6,7 +6,7 @@ import eventlet
 from eventlet.common import get_errno
 from eventlet.green import socket
 from webob import Response
-from webob.exc import HTTPException
+from webob.exc import HTTPClientError, HTTPServerError
 from pprint import pformat
 
 from multivisor.interfaces import IWebsocketUpgradeRequest
@@ -28,10 +28,10 @@ class WebSocketView(object):
         self.sock = self.environ['eventlet.input'].get_socket()
 
     def __call__(self):
-        import ipdb;ipdb.set_trace()
+        #import ipdb;ipdb.set_trace()
         if IWebsocketUpgradeRequest.providedBy(self.request):
             return self.handle_upgrade()
-        raise IncorrectlyConfigured("IWebsocketUpgradeRequest is not provided by "
+        return HTTPServerError("IWebsocketUpgradeRequest is not provided by "
                                     "this request. Make sure the correct INewRequest "
                                     "adapter is hooked up")
 
@@ -57,7 +57,7 @@ class WebSocketView(object):
     def handle_upgrade(self):
         if not (self.environ['HTTP_CONNECTION'] == 'Upgrade' and
                 self.environ['HTTP_UPGRADE'] == 'WebSocket'):
-            return HTTPException('Bad:\n%s' % pformat(self.environ), headerlist=[('Connection','close')])
+            return HTTPClientError('Bad:\n%s' % pformat(self.environ), headerlist=[('Connection','close')])
         sock = self.environ['eventlet.input'].get_socket()
         handshake_reply = ("HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
                            "Upgrade: WebSocket\r\n"
