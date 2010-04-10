@@ -11,3 +11,5 @@ parts
 .coverage
 cover
 *,cover
+.nodeids
+*.log

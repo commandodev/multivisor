@@ -19,6 +19,12 @@
      renderer="templates/websocket.html"
      />
 
+   <view
+     context=".models.Host"
+     view=".views.ws_entry"
+     renderer="templates/websocket.html"
+     />
+
     <route
      path="/echo"
      name="echo"

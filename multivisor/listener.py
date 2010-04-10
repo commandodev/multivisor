@@ -1,7 +1,7 @@
 from eventlet import patcher
 import os
 childutils = patcher.import_patched('supervisor.childutils')
-from multivisor.amqp import connect_to_amqp, EXCHANGE, amqplib
+from multivisor.amqp import connect_to_amqp, EXCHANGE, amqplib, create_routing_key
 from json import dumps
 from pprint import pformat
 import psutil
@@ -67,7 +67,7 @@ class EventParser(object):
         :param process_name: The name of the process
         :returns: 'hostname.supervisor_id.process_name.:attr:`event_name <EVENT_NAME>`'
         """
-        return "%s.%s.%s.%s" % (HOST.replace('.','|'), self.supervisor_id, process_name, self.EVENT_NAME)
+        return create_routing_key(HOST, self.supervisor_id, process_name, self.EVENT_NAME)
 
     def dispatch_message(self, message_body, routing_key, content_type=None):
         if not content_type:

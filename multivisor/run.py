@@ -1,6 +1,7 @@
 from eventlet.wsgi import ALREADY_HANDLED
 from repoze.bfg.configuration import Configurator
-from multivisor.models import get_root
+from multivisor.amqp import EXCHANGE
+from multivisor.models import Root
 from multivisor.server.websocket import WebSocketView
 from webob.response import Response
 from werkzeug import DebuggedApplication
@@ -44,7 +45,9 @@ def app(global_config, **settings):
     ``paster serve``.
     """
     zcml_file = settings.get('configure_zcml', 'configure.zcml')
-    config = Configurator(root_factory=get_root, settings=settings)
+    root = Root(settings.get('amqp_host', 'localhost'),
+                settings.get('amqp_exchange', EXCHANGE))
+    config = Configurator(root_factory=lambda request: root, settings=settings)
     config.begin()
     config.load_zcml(zcml_file)
     config.end()

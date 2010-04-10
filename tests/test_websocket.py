@@ -15,7 +15,6 @@ from unittest import TestCase
 
 from multivisor.interfaces import IWebsocketUpgradeRequest
 from multivisor.server.factory import server_factory
-from multivisor.models import get_root
 from multivisor.server.websocket import WebSocketView
 
 from repoze.debug.responselogger import ResponseLoggingMiddleware
