@@ -30,15 +30,14 @@ class EventParser(object):
     CONTENT_TYPE = 'application/json'
     log = logging.getLogger('listener')
 
-    def __init__(self, amqp_host, exchange, routing_key, stdin=sys.stdin, stdout=sys.stdout):
+    def __init__(self, amqp_host, exchange, stdin=sys.stdin, stdout=sys.stdout, **kwargs):
         self.amqp_host = amqp_host
         self.exchange = exchange
-        self.routing_key = routing_key
         self.stdin = stdin
         self.stdout = stdout
         self.rpc = self._get_rpc()
         self.supervisor_id = self.rpc.supervisor.getIdentification()
-        self.channel = connect_to_amqp(amqp_host, exchange)
+        self.channel = connect_to_amqp(amqp_host, exchange, **kwargs)
 
     def _get_rpc(self, env=os.environ):
         return childutils.getRPCInterface(env)
@@ -128,7 +127,7 @@ def supervisor_events():
     log = logging.getLogger('runner')
     log.debug('command')
     try:
-        parser = Tick5Parser('localhost', EXCHANGE, 'procs.tick')
+        parser = Tick5Parser('localhost', EXCHANGE)
 #        import pdb; pdb.set_trace()
         parser.run()
     except Exception, e:

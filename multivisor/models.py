@@ -3,6 +3,7 @@ from json import loads
 from webob.response import Response
 from zope.interface import implements
 import os, sys
+import eventlet
 
 from multivisor.amqp import connect_to_amqp, EXCHANGE, create_routing_key, deserialize_routing_key
 from multivisor.interfaces import *
@@ -23,16 +24,19 @@ class Root(TreeNode):
 
     QNAME = 'root%s' % os.getpid()
 
-    def __init__(self, amqp_host, amqp_exchange=EXCHANGE):
-        self.channel = connect_to_amqp(amqp_host, amqp_exchange)
+    def __init__(self, amqp_host, amqp_exchange=EXCHANGE, **kwargs):
+        self.amqp_host = amqp_host
+        self.amqp_exchange = amqp_exchange
+        self.channel = connect_to_amqp(amqp_host, amqp_exchange, **kwargs)
         self.message_queue = Queue()
-        spawn_n(self._listen_for_messages)
+        self.listener = spawn_n(self._listen_for_messages)
 
     def _listen_for_messages(self):
         chan = self.channel
         qname=  self.QNAME
         qname, _, _ = chan.queue_declare(qname, auto_delete=True, durable=False)
-        chan.queue_bind(qname, EXCHANGE, create_routing_key(event_type='TICK'))
+        rk = create_routing_key(event_type='TICK')
+        chan.queue_bind(qname, self.amqp_exchange, rk)
         chan.basic_consume(qname, callback=self.handle_message)
         while chan.callbacks:
             try:

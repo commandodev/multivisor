@@ -19,9 +19,9 @@ def deserialize_routing_key(routing_key):
     return RoutingKey(*parts)
 
 
-def connect_to_amqp(hostname=HOST, exchange=EXCHANGE):
+def connect_to_amqp(hostname=HOST, exchange=EXCHANGE, durable=True, auto_delete=False):
     conn = amqplib.Connection(hostname, userid='guest', password='guest', ssl=False, insist=True)
     ch = conn.channel()
     ch.access_request('/data', active=True, read=True)
-    ch.exchange_declare(exchange, 'topic', durable=True, auto_delete=False)
+    ch.exchange_declare(exchange, 'topic', durable=durable, auto_delete=auto_delete)
     return ch

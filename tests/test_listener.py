@@ -21,7 +21,7 @@ class TestTick5Parser(TestCase):
     @patch('multivisor.amqp.amqplib.Connection')
     def setUp(self, MockAQMP):
         os.environ['SUPERVISOR_SERVER_URL'] = 'test'
-        self.tick5 = _TestTick5('localhost', 'test', 'test', StringIO(), StringIO())
+        self.tick5 = _TestTick5('localhost', 'test', StringIO(), StringIO())
         self.tick5.channel = Mock()
 
     def test_ready(self):

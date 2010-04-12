@@ -11,13 +11,13 @@ def amqp_callback(msg):
     print '#'*80
 
 @baker.command
-def listen(keys, qname='procs'):
+def listen(keys, qname='procs', exchange=EXCHANGE):
     print keys
     keys = keys.split(',')
     ch = connect_to_amqp()
     qname, _, _ = ch.queue_declare(qname, auto_delete=True, durable=False)
     for key in keys:
-        ch.queue_bind(qname, EXCHANGE, key)
+        ch.queue_bind(qname, exchange, key)
     ch.basic_consume(qname, callback=amqp_callback)
     while ch.callbacks:
         try:

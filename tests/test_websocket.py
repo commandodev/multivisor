@@ -20,6 +20,8 @@ from multivisor.server.websocket import WebSocketView
 from repoze.debug.responselogger import ResponseLoggingMiddleware
 from logging import getLogger
 
+import random
+
 httplib2 = patcher.import_patched('httplib2')
 
 
@@ -54,7 +56,7 @@ class LimitedTestCase(TestCase):
     timeout is 1 second, change it by setting self.TEST_TIMEOUT to the desired
     quantity."""
 
-    TEST_TIMEOUT = 4
+    TEST_TIMEOUT = 1
     SERVE = server_factory({}, 'localhost', 6544)
 
     def setUp(self):
