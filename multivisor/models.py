@@ -10,6 +10,11 @@ from multivisor.interfaces import *
 
 class TreeNode(object):
 
+    def __new__(cls, *args, **kwargs):
+        new_inst = super(TreeNode, cls).__new__(cls)
+        new_inst.ws_listeners = set()
+        return new_inst
+
     @property
     def router(self):
         if not hasattr(self, '_router'):
@@ -18,6 +23,18 @@ class TreeNode(object):
 
     def __getitem__(self, key):
         return self.router[key]
+
+    def add_ws_listener(self, ws):
+        """Adds a :class:`mulitvisor.server.websocket.Websocket` the the set of listeners"""
+        self.ws_listeners.add(ws)
+
+    def remove_ws_listener(self, ws):
+        """Removes ws from the set of listeners"""
+        self.ws_listeners.discard(ws)
+
+    def send(self, message):
+        for ws in self.ws_listeners:
+            ws.send(message)
 
 
 class Root(TreeNode):
@@ -29,9 +46,9 @@ class Root(TreeNode):
         self.amqp_exchange = amqp_exchange
         self.channel = connect_to_amqp(amqp_host, amqp_exchange, **kwargs)
         self.message_queue = Queue()
-        self.listener = spawn_n(self._listen_for_messages)
+        self.listener = spawn_n(self.subscribe)
 
-    def _listen_for_messages(self):
+    def subscribe(self):
         chan = self.channel
         qname=  self.QNAME
         qname, _, _ = chan.queue_declare(qname, auto_delete=True, durable=False)

@@ -15,11 +15,12 @@ from unittest import TestCase
 
 from multivisor.interfaces import IWebsocketUpgradeRequest
 from multivisor.server.factory import server_factory
-from multivisor.server.websocket import WebSocketView
+from multivisor.server.websocket import WebSocketView, WebSocket
 
 from repoze.debug.responselogger import ResponseLoggingMiddleware
 from logging import getLogger
 
+import mock
 import random
 
 httplib2 = patcher.import_patched('httplib2')
@@ -27,19 +28,27 @@ httplib2 = patcher.import_patched('httplib2')
 
 class EchoWebsocket(WebSocketView):
 
+    def handle_websocket(self, ws):
+        self._ws = ws
+        return super(EchoWebsocket, self).handle_websocket(ws)
+
     def handler(self, ws):
         while True:
             m = ws.wait()
 #            import ipdb; ipdb.set_trace()
             if m is None:
                 break
-            ws.send('%s says %s (env %s)' % (ws.origin, m, str(ws.environ)))
+            ws.send('%s says %s' % (ws.origin, m))
 
-class PlotWebsocket(WebSocketView):
+class RangeWebsocket(WebSocketView):
+
+    def handle_websocket(self, ws):
+        self._ws = ws
+        return super(RangeWebsocket, self).handle_websocket(ws)
 
     def handler(self, ws):
-        for i in xrange(10000):
-            ws.send("0 %s %s\n" % (i, random.random()))
+        for i in xrange(10):
+            ws.send("msg %d" % i)
             eventlet.sleep(0.1)
 
 serve = server_factory({}, 'localhost', 6544)
@@ -66,6 +75,13 @@ class LimitedTestCase(TestCase):
         config = testing.setUp()
         config.begin()
         config.load_zcml('multivisor:configure.zcml')
+        """<route
+             path="/echo"
+             name="echo"
+             view=".run.EchoWebsocket"
+             />"""
+        config.add_route('ec', '/ec', EchoWebsocket)
+        config.add_route('range', '/range', RangeWebsocket)
         config.end()
         self.config = config
         self.logfile = StringIO()
@@ -184,6 +200,64 @@ class LimitedTestCase(TestCase):
                                  'WebSocket-Origin: http://localhost:%s' % self.port,
                                  'WebSocket-Location: ws://localhost:%s/echo\r\n\r\n' % self.port]))
 
+    def test_sending_messages_to_websocket(self):
+        connect = [
+                "GET /ec HTTP/1.1",
+                "Upgrade: WebSocket",
+                "Connection: Upgrade",
+                "Host: localhost:%s" % self.port,
+                "Origin: http://localhost:%s" % self.port,
+                "WebSocket-Protocol: ws",
+                ]
+        sock = eventlet.connect(
+            ('localhost', self.port))
+
+        fd = sock.makefile('rw', close=True)
+        fd.write('\r\n'.join(connect) + '\r\n\r\n')
+        fd.flush()
+        first_resp = sock.recv(1024)
+        fd.write('\x00hello\xFF')
+        fd.flush()
+        result = sock.recv(1024)
+        eq_(result, '\x00http://localhost:%s says hello\xff' % self.port)
+        fd.write('\x00start')
+        fd.flush()
+        fd.write(' end\xff')
+        fd.flush()
+        result = sock.recv(1024)
+        eq_(result, '\x00http://localhost:%s says start end\xff' % self.port)
+        fd.write('')
+        fd.flush()
+
+
+
+    def test_getting_messages_from_websocket(self):
+        connect = [
+                "GET /range HTTP/1.1",
+                "Upgrade: WebSocket",
+                "Connection: Upgrade",
+                "Host: localhost:%s" % self.port,
+                "Origin: http://localhost:%s" % self.port,
+                "WebSocket-Protocol: ws",
+                ]
+        sock = eventlet.connect(
+            ('localhost', self.port))
+
+        fd = sock.makefile('rw', close=True)
+        fd.write('\r\n'.join(connect) + '\r\n\r\n')
+        fd.flush()
+        resp = sock.recv(1024)
+        headers, result = resp.split('\r\n\r\n')
+        msgs = [result.strip('\x00\xff')]
+        cnt = 10
+        while cnt:
+            msgs.append(sock.recv(20).strip('\x00\xff'))
+            cnt -= 1
+        # Last item in msgs is an empty string
+        eq_(msgs[:-1], ['msg %d' % i for i in range(10)])
+
+
+
 
 
 class TestWebsocketAdaptation(TestCase):
@@ -201,5 +275,39 @@ class TestWebsocketAdaptation(TestCase):
         request = testing.DummyRequest(headers=dict(Upgrade='Websocket'), scheme='http')
         self.config.registry.notify(NewRequest(request))
         ok_(IWebsocketUpgradeRequest.providedBy(request))
+
+class TestWebSocket(TestCase):
+
+    def setUp(self):
+        self.mock_socket = s = mock.Mock()
+        self.environ = env = dict(HTTP_ORIGIN='http://localhost', HTTP_WEBSOCKET_PROTOCOL='ws',
+                                  PATH_INFO='test')
+
+        self.test_ws = WebSocket(s, env)
+
+    def test_recieve(self):
+        ws = self.test_ws
+        ws.socket.recv.return_value = '\x00hello\xFF'
+        eq_(ws.wait(), 'hello')
+        eq_(ws._buf, '')
+        eq_(len(ws._msgs), 0)
+        ws.socket.recv.return_value = ''
+        eq_(ws.wait(), None)
+        eq_(ws._buf, '')
+        eq_(len(ws._msgs), 0)
+
+
+    def test_send_to_ws(self):
+        ws = self.test_ws
+        ws.send(u'hello')
+        ok_(ws.socket.sendall.called_with("\x00hello\xFF"))
+        ws.send(10)
+        ok_(ws.socket.sendall.called_with("\x0010\xFF"))
+
+    def test_close_ws(self):
+        ws = self.test_ws
+        ws.close()
+        ok_(ws.socket.shutdown.called_with(True))
+
 
 

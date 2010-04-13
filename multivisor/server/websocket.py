@@ -35,10 +35,7 @@ class WebSocketView(object):
                                     "this request. Make sure the correct INewRequest "
                                     "adapter is hooked up")
 
-    def verify_client(self):
-        pass
-
-    def handler(self, ws):
+    def handler(self, ws): #pragma NO COVER
         raise NotImplementedError
 
     def handle_websocket(self, ws):
@@ -46,7 +43,7 @@ class WebSocketView(object):
 
         try:
             self.handler(ws)
-        except socket.error, e:
+        except socket.error, e: #pragma NO COVER
             if get_errno(e) != errno.EPIPE:
                 raise
         # use this undocumented feature of eventlet.wsgi to close the connection properly
@@ -117,7 +114,7 @@ class WebSocket(object):
         while buf:
             assert ord(buf[0]) == 0, "Don't understand how to parse this type of message: %r" % buf
             end_idx = buf.find("\xFF")
-            if end_idx == -1:
+            if end_idx == -1: #pragma NO COVER
                 break
             msgs.append(buf[1:end_idx].decode('utf-8', 'replace'))
             buf = buf[end_idx+1:]
