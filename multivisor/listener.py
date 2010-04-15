@@ -68,7 +68,7 @@ class EventParser(object):
         """
         return create_routing_key(HOST, self.supervisor_id, process_name, self.EVENT_NAME)
 
-    def dispatch_message(self, message_body, routing_key, content_type=None):
+    def dispatch_message(self, routing_key, message_body, content_type=None):
         if not content_type:
             content_type = self.CONTENT_TYPE
         msg = amqplib.Message(dumps(message_body), content_type=content_type)
@@ -102,7 +102,7 @@ class Tick5Parser(EventParser):
             pid = int(proc['pid'])
             proc['process_info'] = self.get_process_info(pid)
             routing_key = self.construct_routing_key(process_name)
-            self.dispatch_message(proc, routing_key)
+            self.dispatch_message(routing_key, proc)
 
     def get_process_info(self, pid):
         ps = psutil.Process(pid)

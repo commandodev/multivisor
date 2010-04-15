@@ -7,6 +7,7 @@ from multivisor.amqp import connect_to_amqp, create_routing_key, deserialize_rou
 from multivisor.models import *
 from multivisor.listener import EventParser
 from multivisor.server.websocket import WebSocket
+from repoze.bfg.traversal import traverse
 import eventlet
 import mock
 
@@ -59,19 +60,21 @@ class TestTraversal(TestCase):
         self.timer = Timeout(new_timeout,
                              TestIsTakingTooLong(new_timeout))
 
-    def send_msg(self, body, rk):
+    def send_msg(self, rk, body):
         eventlet.sleep(0.1)
-        self.sender.dispatch_message(body, rk)
+        self.sender.dispatch_message(rk, body)
         eventlet.sleep(0.1)
 
 
     def test_root_sets_up_new_hosts(self):
         rk = create_routing_key('new_host', 'supervisor', 'process', 'TICK')
-        self.send_msg({'body': 'test'}, rk)
+        self.send_msg(rk, {'body': 'test'})
         ok_('new_host' in self.root.router)
         host = self.root['new_host']
+        traversed = traverse(self.root, '/new_host/supervisor/process/')
+        eq_(traversed['context'], host['supervisor']['process'])
         # send the same message shouldn't recreate the host
-        self.send_msg({'body': 'test'}, rk)
+        self.send_msg(rk, {'body': 'test'})
         ok_(host is self.root['new_host'])
 
 

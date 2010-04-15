@@ -257,9 +257,6 @@ class LimitedTestCase(TestCase):
         eq_(msgs[:-1], ['msg %d' % i for i in range(10)])
 
 
-
-
-
 class TestWebsocketAdaptation(TestCase):
 
     def setUp(self):
