@@ -1,0 +1,30 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<title>{% block title %}Multivisor - all your process are belong to us {% endblock %}</title>
+<!--<link href="{{ request.application_url }}/media/css/content.css" rel="stylesheet" type="text/css" />-->
+<link href="{{ request.application_url }}/media/css/library.css" rel="stylesheet" type="text/css" />
+<link href="{{ request.application_url }}/media/css/grids.css" rel="stylesheet" type="text/css" />
+<link href="{{ request.application_url }}/media/css/template.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div class="page">
+	<div class="head">
+        <div id="logo">
+            <h2>{{ title }}</h2>
+        </div>
+        <div id="menu">
+        </div>
+    </div>
+<!-- end header -->
+	<div class="body"><!-- Body -->
+		<div class="leftCol gMail">{% block left %}{% endblock %}</div>
+		<div class="rightCol">{% block right %}{% endblock %}</div>
+		<div class="main">{% block main %}{% endblock %}</div>
+	</div>
+	<div class="foot">
+        <p id="legal">( c ) 2010. All Rights Reserved.</p>
+	</div>
+</div>
+</body>
+</html>
