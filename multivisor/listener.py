@@ -4,6 +4,7 @@ childutils = patcher.import_patched('supervisor.childutils')
 from multivisor.amqp import connect_to_amqp, EXCHANGE, amqplib, create_routing_key
 from json import dumps
 from pprint import pformat
+import baker
 import psutil
 import logging
 import os
@@ -118,21 +119,20 @@ class Tick5Parser(EventParser):
 
 
 
-
-
-
-
-
-def supervisor_events():
+@baker.command
+def tick(host):
     log = logging.getLogger('runner')
     log.debug('command')
     try:
-        parser = Tick5Parser('localhost', EXCHANGE)
+        parser = Tick5Parser(host, EXCHANGE)
 #        import pdb; pdb.set_trace()
         parser.run()
     except Exception, e:
         log.exception(e)
 
+def run():
+    baker.run()
+
 if __name__ == '__main__':
-    supervisor_events()
+    baker.run()
     import sys
