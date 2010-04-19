@@ -12,16 +12,19 @@ class ITreeNode(Interface):
         """Adds ws to the set of attached :class:`WebSockets <multivisor.server.websocket.WebSocket>`"""
 
     def remove_ws_listener(ws):
-        """Discards ws from the set of attached :class:`WebSockets <multivisor.server.websocket.WebSocket>`""" 
+        """Discards ws from the set of attached :class:`WebSockets <multivisor.server.websocket.WebSocket>`"""
 
-class ISupervisorInstance(Interface):
+class IHost(ITreeNode):
+    """A host running supervisor"""
+
+class ISupervisorInstance(ITreeNode):
     """An instance of supervisor running on a host"""
 
     name = Attribute("""Name of the supervisord instance (set in supervisor.config""")
     host_name = Attribute("""Host that this instance is running on""")
 
 
-class ISupervisorProcess(Interface):
+class ISupervisorProcess(ITreeNode):
     """A process managed by a :class:`ISupervisorInstance`"""
 
     supervisor = Attribute("""The class:`ISupervisorInstance` this process is running in""")

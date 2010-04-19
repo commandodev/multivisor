@@ -1,6 +1,7 @@
 from collections import deque
 from eventlet import Queue, spawn_n
 from json import loads
+from repoze.bfg.traversal import model_path
 from webob.response import Response
 from zope.interface import implements
 import os, sys
@@ -21,6 +22,14 @@ class TreeNode(object):
         if not hasattr(self, '_router'):
             self._router = dict()
         return self._router
+
+    @property
+    def path(self):
+        return model_path(self)
+
+    @property
+    def id(self):
+        return model_path(self).strip('/').replace('/', '-').replace('.', '_')
 
     def __getitem__(self, key):
         return self.router[key]
@@ -74,13 +83,20 @@ class Root(TreeNode):
         host = routing_key.host
         self.router.setdefault(host, Host(self, host)).update(routing_key, body)
 
+    def all_processes(self):
+        procs = []
+        for host in self.router.values():
+            procs.extend(host.all_processes())
+        return procs
+
+
 
 class SubTreeNode(TreeNode):
     """SubTreeNodes are initialized with information about their parents"""
 
     def __init__(self, parent, name):
         self.__parent__ = parent
-        self.__name__ = name
+        self.__name__ = self.name = name
 
     def _child_class(self):
         return None
@@ -119,6 +135,12 @@ class Host(SubTreeNode):
 
     def _rk_attr(self):
         return 'supervisor_id'
+
+    def all_processes(self):
+        procs = []
+        for sv in self.router.values():
+            procs.extend(sv.router.values())
+        return procs
 
 
 class SupervisorInstance(SubTreeNode):

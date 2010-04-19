@@ -15,13 +15,13 @@
 
   <view
      context=".models.Root"
-     view=".views.ws_entry"
-     renderer="templates/websocket.html"
+     view=".views.root_view"
+     renderer="templates/root.html"
      />
 
    <view
-     context=".models.Host"
-     view=".views.ws_entry"
+     context=".interfaces.IHost"
+     view=".views.host_view"
      renderer="templates/websocket.html"
      />
 
