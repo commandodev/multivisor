@@ -179,8 +179,8 @@ class Process(SubTreeNode):
 
     def __init__(self, parent, name):
         super(Process, self).__init__(parent, name)
-        self.mem_info = deque([], 100)
-        self.proc_info = deque([], 100)
+        self.mem_info = deque([], 1000)
+        self.proc_info = deque([], 1000)
 
     def get_handler_for_event_type(self, event_type):
         if event_type.startswith('TICK'):
