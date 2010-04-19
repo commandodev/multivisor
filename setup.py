@@ -33,7 +33,7 @@ setup(name='multivisor',
       'paste.app_factory': ['app = multivisor.run:app'],
       'paste.server_factory': ['eventlet_server = multivisor.server.factory:server_factory'],
       'console_scripts': [
-              'mv-listener = multivisor.listener:supervisor_events',
+              'listener = multivisor.listener:run',
               'amqp = multivisor.amqp.commands:main',
               ]
       }
