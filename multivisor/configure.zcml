@@ -19,10 +19,16 @@
      renderer="templates/root.html"
      />
 
-   <view
+  <view
      context=".interfaces.IHost"
      view=".views.host_view"
      renderer="templates/websocket.html"
+     />
+
+  <view
+     context=".interfaces.ISupervisorProcess"
+     view=".views.HostWebsocket"
+     request_type='.interfaces.IWebsocketUpgradeRequest'
      />
 
     <route

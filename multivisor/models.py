@@ -1,14 +1,16 @@
 from collections import deque
 from eventlet import Queue, spawn_n
-from json import loads
+from json import loads, dumps
 from repoze.bfg.traversal import model_path
 from webob.response import Response
 from zope.interface import implements
-import os, sys
+import os, sys, logging, pprint
 import eventlet
 
 from multivisor.amqp import connect_to_amqp, EXCHANGE, create_routing_key, deserialize_routing_key
 from multivisor.interfaces import *
+
+logger = logging.getLogger('mv.models')
 
 class TreeNode(object):
 
@@ -26,6 +28,10 @@ class TreeNode(object):
     @property
     def path(self):
         return model_path(self)
+
+    @property
+    def ws_path(self):
+        return self.path.replace('http', 'ws')
 
     @property
     def id(self):
@@ -182,10 +188,25 @@ class Process(SubTreeNode):
         self.mem_info = deque([], 1000)
         self.proc_info = deque([], 1000)
 
+    @property
+    def server(self):
+        # TODO: This assumes the current structure, refactor
+        return self.__parent__.__parent__
+
     def get_handler_for_event_type(self, event_type):
         if event_type.startswith('TICK'):
             return self.handle_tick
 
     def handle_tick(self, routing_key, message):
-        pass
+        try:
+            process_info = message['process_info']
+            timestamp = message['now']
+            self.proc_info.append(dict(timestamp=timestamp,
+                                       cpu=process_info['cpu_percent']))
+            self.mem_info.append(dict(timestamp=timestamp,
+                                      mem_percent=process_info['mem_percent']))
+            self.send(dumps(dict(proc=process_info, timestamp=timestamp)))
+        except KeyError, e:
+            logger.error("%s: Malformed message %s" % (e, pprint.pformat(message)))
+
 

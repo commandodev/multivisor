@@ -4,11 +4,14 @@
 <div>
     <h1>{{ root }}</h1>
     {% for process in processes %}
-    <div id='{{ process.id }}'class="process">
-    <h2>{{ process.name }}</h2>
-
-        <p><a href='{{ process.path }}'>link</a></p>
-    </div>
+    <div id='{{ process.id }}' class="line process">
+        <div class="unit size1of4">
+            <h2><a href='{{ process.path }}' class='process-link'>{{ process.name }}</a></h2>
+            <p>On server: <a href='{{ process.server.path }}'>{{ process.server.name }}</a></p>
+        </div>
+        <div class="unit size3of4 lastUnit">
+            <div id='{{ process.id }}-chart'class='chart-wrapper'></div>
+        </div>
     {% endfor %}
 </div>
 {% endblock %}
