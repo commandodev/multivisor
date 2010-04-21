@@ -187,6 +187,9 @@ class Process(SubTreeNode):
         super(Process, self).__init__(parent, name)
         self.mem_info = deque([], 1000)
         self.proc_info = deque([], 1000)
+        self.state = None
+        self.last_tick_time = None
+        self.start_time = None
 
     @property
     def server(self):
@@ -198,14 +201,18 @@ class Process(SubTreeNode):
             return self.handle_tick
 
     def handle_tick(self, routing_key, message):
+
         try:
-            process_info = message['process_info']
             timestamp = message['now']
+            self.start_time = message['start']
+            self.last_tick_time = message['now']
+            self.state = message['statename']
+            process_info = message['process_info']
             self.proc_info.append(dict(timestamp=timestamp,
                                        cpu=process_info['cpu_percent']))
             self.mem_info.append(dict(timestamp=timestamp,
                                       mem_percent=process_info['mem_percent']))
-            self.send(dumps(dict(proc=process_info, timestamp=timestamp)))
+            self.send(dumps(message))
         except KeyError, e:
             logger.error("%s: Malformed message %s" % (e, pprint.pformat(message)))
 

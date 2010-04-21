@@ -7,6 +7,7 @@
 <link href="{{ request.application_url }}/media/css/grids.css" rel="stylesheet" type="text/css" />
 <link href="{{ request.application_url }}/media/css/template.css" rel="stylesheet" type="text/css" />
 <link href="{{ request.application_url }}/media/js/jqplot/jquery.jqplot.css"  type='text/css' />
+<link href="{{ request.application_url }}/media/css/multivisor.css" rel="stylesheet" type="text/css"/>
 
 <script src="{{ request.application_url }}/media/js/jquery-1.3.2.min.js" type='application/javascript'></script>
 <script src="{{ request.application_url }}/media/js/jqplot/jquery.jqplot.js" type='application/javascript'></script>
@@ -30,7 +31,7 @@
 <!-- end header -->
 	<div class="body"><!-- Body -->
 		<div class="leftCol gMail">{% block left %}{% endblock %}</div>
-		<div class="rightCol">{% block right %}{% endblock %}</div>
+		<div class="rightCol gMail">{% block right %}{% endblock %}</div>
 		<div class="main">{% block main %}{% endblock %}</div>
 	</div>
 	<div class="foot">

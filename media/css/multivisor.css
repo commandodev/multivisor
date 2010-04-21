@@ -1,0 +1,16 @@
+body {
+    color: white;
+    background-color: black;
+}
+
+.process {
+    border: 2px solid #666;
+    -webkit-border-radius: 6px;
+    padding: 0 10px;
+    margin-bottom: 10px;
+}
+
+a {
+    color: #22c;
+    text-decoration: none;
+}
