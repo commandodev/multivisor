@@ -13,14 +13,18 @@
 <script src="{{ request.application_url }}/media/js/jqplot/jquery.jqplot.js" type='application/javascript'></script>
 <script src="{{ request.application_url }}/media/js/jqplot/plugins/jqplot.canvasAxisTickRenderer.js" type='application/javascript'></script>
 <script src="{{ request.application_url }}/media/js/jqplot/plugins/jqplot.dateAxisRenderer.min.js" type='application/javascript'></script>
+<script src="{{ request.application_url }}/media/js/jqplot/plugins/jqplot.categoryAxisRenderer.min.js" type='application/javascript'></script>
+<script src="{{ request.application_url }}/media/js/jqplot/plugins/jqplot.barRenderer.js" type='application/javascript'></script>
+<script src="{{ request.application_url }}/media/js/processing-0.8.min.js" type='application/javascript'></script>
+<script src="{{ request.application_url }}/media/js/sparklines.js" type='application/javascript'></script>
 <!-- <script src="{{ request.application_url }}/media/js/jqplot/plugins/"></script>
 <script src="{{ request.application_url }}/media/js/jqplot/plugins/"></script>
 <script src="{{ request.application_url }}/media/js/jqplot/plugins/"></script> -->
 <script src="{{ request.application_url }}/media/js/multivisor.js" type='application/javascript'></script>
-
+{%  block extrahead %}{% endblock %}
 </head>
 <body>
-<div class="page">
+<div class="page full">
 	<div class="head">
         <div id="logo">
             <h2>{{ title }}</h2>

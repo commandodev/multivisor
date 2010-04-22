@@ -1,0 +1,15 @@
+<div id='{{ process.id }}' class="line process">
+    <div class="unit size1of4 title">
+        <h2 class='{{ process.state }}'>
+            <a href='{{ process.path }}' class='process-link {{ process.state }}'>{{ process.name }}</a>
+        </h2>
+        <span class='state {{ process.state }}'>{{ process.state }}</span>
+
+    </div>
+    <div class="unit size1of4">
+        
+    </div>
+    <div class="unit size2of4 lastUnit">
+        <div id='{{ process.id }}-chart'class='chart-wrapper'></div>
+    </div>
+</div>

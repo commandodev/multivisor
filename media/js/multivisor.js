@@ -3,6 +3,26 @@
     $(function(){ // onload
         $('.process').makeChart()
 
+        var server_chart = $.jqplot('server-chart', [[[1,1],[2,2],[3,3]], [[1,4],[2,5],[3,6]]], {
+            stackSeries: true,
+            //legend: {show: true, location: 'nw'},
+            //title: 'Unit Revenues: Acme Traps Division',
+            seriesDefaults: {renderer: $.jqplot.BarRenderer},//,rendererOptions: {barWidth: 50}},
+            //series: [{label: '1st Qtr'}, {label: '2nd Qtr'}],
+            axes: {
+                xaxis: {
+                    renderer: $.jqplot.CategoryAxisRenderer,
+                    ticks:['a', 'b', 'c']
+                }
+//                yaxis: {
+//                    min: 0,
+//                    max: 20,
+//                    numberTicks:5,
+//                    tickOptions:{formatString:'$%.2f'}
+//                }
+            }
+        });
+
     }) // end onload
 
 })(jQuery)
@@ -13,7 +33,7 @@ jQuery.fn.makeChart = function(){
         jQuery.fn.makeChart.web_sockets[id] = ws
     }
     jQuery.each(this, function(i, process_elem){
-        self = jQuery(process_elem);
+        var self = jQuery(process_elem);
         var process_id = self.attr('id');
         var chart_target = self.find('.chart-wrapper').attr('id')
         var ws_url = self.find('a.process-link').attr('href');
@@ -43,7 +63,7 @@ jQuery.fn.makeChart = function(){
             console.log(e);
         };
         chart_socket.onmessage = function(e){
-            console.log(e.data, process_id);
+            //console.log(e.data, process_id);
         };
     });
 

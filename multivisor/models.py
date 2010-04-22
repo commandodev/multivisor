@@ -1,6 +1,8 @@
 from collections import deque
 from eventlet import Queue, spawn_n
+from jinja2 import Markup
 from json import loads, dumps
+from repoze.bfg.jinja2 import render_template
 from repoze.bfg.traversal import model_path
 from webob.response import Response
 from zope.interface import implements
@@ -91,9 +93,13 @@ class Root(TreeNode):
 
     def all_processes(self):
         procs = []
-        for host in self.router.values():
+        for host in self.servers:
             procs.extend(host.all_processes())
         return procs
+
+    @property
+    def servers(self):
+        return self.router.values()
 
 
 
@@ -148,6 +154,13 @@ class Host(SubTreeNode):
             procs.extend(sv.router.values())
         return procs
 
+    @property
+    def num_processes(self):
+        return len(self.all_processes())
+
+    @property
+    def running_processes(self):
+        return [p for p in self.all_processes() if p.state == 'RUNNING']
 
 class SupervisorInstance(SubTreeNode):
     implements(ISupervisorInstance)
@@ -185,8 +198,7 @@ class Process(SubTreeNode):
 
     def __init__(self, parent, name):
         super(Process, self).__init__(parent, name)
-        self.mem_info = deque([], 1000)
-        self.proc_info = deque([], 1000)
+        self.proc_info = deque([], 100)
         self.state = None
         self.last_tick_time = None
         self.start_time = None
@@ -208,12 +220,20 @@ class Process(SubTreeNode):
             self.last_tick_time = message['now']
             self.state = message['statename']
             process_info = message['process_info']
-            self.proc_info.append(dict(timestamp=timestamp,
-                                       cpu=process_info['cpu_percent']))
-            self.mem_info.append(dict(timestamp=timestamp,
-                                      mem_percent=process_info['mem_percent']))
+            self.proc_info.append(dict(now=timestamp,
+                                       process_info=process_info))
             self.send(dumps(message))
         except KeyError, e:
             logger.error("%s: Malformed message %s" % (e, pprint.pformat(message)))
+
+    def add_ws_listener(self, ws):
+        super(Process, self).add_ws_listener(ws)
+        for tick in self.proc_info:
+            ws.send(dumps(tick))
+
+    @property
+    def html(self):
+        return Markup(render_template('templates/parts/process.html', process=self))
+        
 
 

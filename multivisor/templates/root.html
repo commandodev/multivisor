@@ -1,29 +1,29 @@
 <!--<html xmlns="http://www.w3.org/1999/xhtml"> -->
 {% extends "base.html" %}
-{% block main %}
-<div>
-    <h1>ALL PROCESSES</h1>
-    <p>
-    {% for server_name, server in root.router.items() %}
-        <a href='{{ server.path }}'>{{ server_name }}</a>
-    {%  endfor %}
-    </p>
-    {% for process in processes %}
-    <div id='{{ process.id }}' class="line process">
-        <div class="unit size1of4">
-            <h2>
-                <a href='{{ process.path }}' class='process-link'>{{ process.name }}</a>
-                <span class='state {{ process.state }}'>{{ process.state }}</span>
-            </h2>
+{% block extrahead %}
+<script>
+    var running = [{% for server in root.servers %}
+                    {{ server.running_processes|length }}{% if not loop.last %}, {% endif %}
+                   {%- endfor %}]
+    var all = [{% for server in root.servers %}
+                {{ server.num_processes }}{% if not loop.last %}, {% endif %}
+               {%- endfor %}]
 
-        </div>
-        <div class="unit size1of4">
-            <p>On server: <a href='{{ process.server.path }}'>{{ process.server.name }}</a></p>
-        </div>
-        <div class="unit size2of4 lastUnit">
-            <div id='{{ process.id }}-chart'class='chart-wrapper'></div>
-        </div>
-    </div>
+</script>
+{% endblock %}
+{% block main %}
+<div id='server-chart'>
+
+</div>
+<div>
+    {% for server in root.servers %}
+        <h2 class='server'>
+            <a href='{{ server.path }}'>{{ server.name }}</a>
+            <span>{{ server.running_processes|length }}/{{ server.num_processes }} processes</span>
+        </h2>
+        {% for process in server.all_processes() %}
+            {{ process.html }}
+        {% endfor %}
     {% endfor %}
 </div>
 {% endblock %}
