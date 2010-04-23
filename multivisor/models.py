@@ -1,5 +1,8 @@
 from collections import deque
+from datetime import datetime
 from eventlet import Queue, spawn_n
+from eventlet.common import get_errno
+from eventlet.green import socket
 from jinja2 import Markup
 from json import loads, dumps
 from repoze.bfg.jinja2 import render_template
@@ -8,6 +11,7 @@ from webob.response import Response
 from zope.interface import implements
 import os, sys, logging, pprint
 import eventlet
+import errno
 
 from multivisor.amqp import connect_to_amqp, EXCHANGE, create_routing_key, deserialize_routing_key
 from multivisor.interfaces import *
@@ -20,6 +24,9 @@ class TreeNode(object):
         new_inst = super(TreeNode, cls).__new__(cls)
         new_inst.ws_listeners = set()
         return new_inst
+
+    def __str__(self):
+        return u"%s, %s" % (self.__name__, self.__parent__)
 
     @property
     def router(self):
@@ -51,8 +58,18 @@ class TreeNode(object):
         self.ws_listeners.discard(ws)
 
     def send(self, message):
+        remove = []
         for ws in self.ws_listeners:
-            ws.send(message)
+            try:
+                ws.send(message)
+            except socket.error, e: #pragma NO COVER
+                if get_errno(e) != errno.EPIPE:
+                    raise
+                remove.append(ws)
+                print self, e
+        for ws in remove:
+            self.remove_ws_listener(ws)
+
 
 
 class Root(TreeNode):
@@ -198,10 +215,11 @@ class Process(SubTreeNode):
 
     def __init__(self, parent, name):
         super(Process, self).__init__(parent, name)
-        self.proc_info = deque([], 100)
+        self.proc_info = deque([], 20)
         self.state = None
         self.last_tick_time = None
         self.start_time = None
+        self.pid = None
 
     @property
     def server(self):
@@ -216,10 +234,11 @@ class Process(SubTreeNode):
 
         try:
             timestamp = message['now']
-            self.start_time = message['start']
-            self.last_tick_time = message['now']
+            self.start_time = datetime.fromtimestamp(message['start'])
+            self.last_tick_time = datetime.fromtimestamp(message['now'])
             self.state = message['statename']
             process_info = message['process_info']
+            self.pid = message['pid']
             self.proc_info.append(dict(now=timestamp,
                                        process_info=process_info))
             self.send(dumps(message))
@@ -230,6 +249,12 @@ class Process(SubTreeNode):
         super(Process, self).add_ws_listener(ws)
         for tick in self.proc_info:
             ws.send(dumps(tick))
+
+    @property
+    def uptime(self):
+        if self.start_time and self.last_tick_time and self.status == 'RUNNING':
+            return self.start_time - self.last_tick_time
+
 
     @property
     def html(self):

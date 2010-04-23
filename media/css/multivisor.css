@@ -1,11 +1,15 @@
 body {
     margin: 0;
+    height: 3000%;
 }
 .full {
     color: white;
     background-color: black;
     height: 100%;
     padding: 20px;
+}
+#server-chart {
+   height: 150px; 
 }
 h2.server {
     margin: 0.5em 0 0.2em 0;
@@ -15,11 +19,15 @@ h2.server {
     /*border-bottom: 2px solid #666;*/
     -webkit-border-radius: 6px;
     -moz-border-radius: 6px;
-    padding: 5px 10px;
+    padding: 0px 10px;
     margin-bottom: 5px;
     background-color: #222;
 }
-
+.chart-wrapper {
+    height: 70px;
+    width: 250px;
+    float: right;
+}
 a {
     color: #22a;
     text-decoration: none;

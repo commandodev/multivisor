@@ -2,19 +2,13 @@
 {% extends "base.html" %}
 {% block extrahead %}
 <script>
-    var running = [{% for server in root.servers %}
-                    {{ server.running_processes|length }}{% if not loop.last %}, {% endif %}
-                   {%- endfor %}]
-    var all = [{% for server in root.servers %}
-                {{ server.num_processes }}{% if not loop.last %}, {% endif %}
-               {%- endfor %}]
+    var server_data = [{{ down }}, {{ running }}];
+    var labels = [{% for s in root.servers %}"{{ s.name }}"{% if not loop.last %},{%  endif %}{% endfor %}];
 
 </script>
 {% endblock %}
 {% block main %}
-<div id='server-chart'>
-
-</div>
+<div id='server-chart'></div>
 <div>
     {% for server in root.servers %}
         <h2 class='server'>

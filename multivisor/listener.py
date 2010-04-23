@@ -94,8 +94,16 @@ class EventParser(object):
 class Tick5Parser(EventParser):
 
     EVENT_NAME = 'TICK'
+    def __init__(self, *args, **kwargs):
+        super(Tick5Parser, self).__init__(*args, **kwargs)
+        self.procs = {}
+        self.leak = []
+        self.count = 0
 
     def process_event(self, headers, payload):
+        if self.count % 5 == 0:
+            self.leak = []
+        self.leak.append(range(10000))
         all_procs = self.rpc.supervisor.getAllProcessInfo()
         self.log.info(all_procs)
         for proc in all_procs:
@@ -106,6 +114,7 @@ class Tick5Parser(EventParser):
             self.dispatch_message(routing_key, proc)
 
     def get_process_info(self, pid):
+#        ps = self.procs.setdefault(pid, psutil.Process(pid))
         ps = psutil.Process(pid)
         try:
             rss, vms = ps.get_memory_info()

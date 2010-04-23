@@ -7,9 +7,10 @@
 
     </div>
     <div class="unit size1of4">
-        
+        <p>Started: {{ process.start_time }}</p>
+        <p>PID: {{ process.pid }}</p>
     </div>
     <div class="unit size2of4 lastUnit">
-        <div id='{{ process.id }}-chart'class='chart-wrapper'></div>
+        <div id='{{ process.id }}-chart' class='chart-wrapper'></div>
     </div>
 </div>
