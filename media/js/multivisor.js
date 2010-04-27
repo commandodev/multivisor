@@ -84,7 +84,7 @@ var make_server_chart = null;
                          renderer: $.jqplot.BarRenderer,
                          rendererOptions: {
                             barPadding: 2,
-                            barMargin: 15,
+                            //barMargin: 15,
                             barWidth: 10
                          }
                         },
@@ -104,8 +104,8 @@ var make_server_chart = null;
                     },
                     grid: {
                         drawGridlines: false,
-                        background: '#222',
-                        borderColor: '#222',
+                        background: '#282828',
+                        borderColor: '#282828',
                         shadow: false
                     },
                     axes: {
@@ -119,14 +119,14 @@ var make_server_chart = null;
 //                        yaxis2: {
 //                            min: 0
 //                        }
-                    },
-                    cursor: {
-                      showVerticalLine:true,
-                      showHorizontalLine:false,
-                      showCursorLegend:false,
-                      showTooltip: true,
-                      zoom:false
                     }
+//                    cursor: {
+//                      showVerticalLine:true,
+//                      showHorizontalLine:false,
+//                      showCursorLegend:false,
+//                      showTooltip: true,
+//                      zoom:false
+//                    }
                 });
 
             };
