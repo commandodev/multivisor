@@ -6,7 +6,7 @@ var make_server_chart = null;
         $('.process').makeChart();
 
         make_server_chart = function(target, stats){
-
+            return;
             $('#' + target).empty();
 
             server_chart = $.jqplot(target, stats, {
@@ -72,62 +72,20 @@ var make_server_chart = null;
             update_ws(chart_socket);
 
             chart_socket.make_process_chart = function(){
+                $('#' + this.chart_target).empty();
+                var x = [];
+                var cpu = [];
+                var mem = [];
+                $.each(this.mem_use, function(i, o){
+                    x.push(o[0]);
+                    mem.push(o[1]);
+                    cpu.push(chart_socket.cpu_use[i][1]);
+                })
+                r = Raphael(this.chart_target, 250, 100);
+                r.g.barchart(0, 0, 250, 100, [mem], {colors:[r.g.colors[2]]});
+                r.g.linechart(0, 0, 250, 100, x, cpu);
 
-                $('#' + this.chart_target).empty()
-                this.server_chart = $.jqplot(this.chart_target, [this.mem_use, this.cpu_use], {
-                    //stackSeries: true,
-                    seriesColors: ['#999', 'orange'],
-                    //legend: {show: true, location: 'nw'},
-                    //title: 'Unit Revenues: Acme Traps Division',
-                    series: [
-                        {label: 'RAM',
-                         renderer: $.jqplot.BarRenderer,
-                         rendererOptions: {
-                            barPadding: 2,
-                            //barMargin: 15,
-                            barWidth: 10
-                         }
-                        },
-                        {label: 'CPU',
-                         showMarker: false,
-                         lineWidth: 2,
-                         yaxis: 'y2axis'
-                        }
-                    ],
-                    axesDefaults: {
-                        show: false,
-                        tickOptions: {
-                            showMark: false,
-                            showLabel: false,
-                            showGridline: false
-                        }
-                    },
-                    grid: {
-                        drawGridlines: false,
-                        background: '#282828',
-                        borderColor: '#282828',
-                        shadow: false
-                    },
-                    axes: {
-                        xaxis: {
-                            show: false,
-                            renderer: $.jqplot.DateAxisRenderer
-                        }
-//                        yaxis: {
-//                            min: 0
-//                        },
-//                        yaxis2: {
-//                            min: 0
-//                        }
-                    }
-//                    cursor: {
-//                      showVerticalLine:true,
-//                      showHorizontalLine:false,
-//                      showCursorLegend:false,
-//                      showTooltip: true,
-//                      zoom:false
-//                    }
-                });
+
 
             };
 

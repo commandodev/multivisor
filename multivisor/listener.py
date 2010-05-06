@@ -6,12 +6,12 @@ from json import dumps
 from pprint import pformat
 import baker
 import psutil
-import logging
+#import logging
 import os
 import socket
 import sys
 
-logging.basicConfig(filename='/tmp/listener.log', level=logging.INFO)
+#logging.basicConfig(filename='/tmp/listener.log', level=logging.INFO)
 HOST = socket.gethostname()
 
 
@@ -29,7 +29,7 @@ class EventParser(object):
     DELIVERY_MODE = 1
     #: Message content_type
     CONTENT_TYPE = 'application/json'
-    log = logging.getLogger('listener')
+#    log = logging.getLogger('listener')
 
     def __init__(self, amqp_host, exchange, stdin=sys.stdin, stdout=sys.stdout, **kwargs):
         self.amqp_host = amqp_host
@@ -76,14 +76,14 @@ class EventParser(object):
         self.channel.basic_publish(msg, self.exchange, routing_key)
 
     def run(self, test=False):
-        self.log.debug('run')
+#        self.log.debug('run')
         while 1:
             sys.stderr.write('tick')
             headers, payload = self.wait()
             try:
                 self.process_event(headers, payload)
             except:
-                self.log.exception('oops')
+                pass#self.log.exception('oops')
             finally:
                 sys.stderr.flush()
                 self.ok()
@@ -105,7 +105,7 @@ class Tick5Parser(EventParser):
             self.leak = []
         self.leak.append(range(10000))
         all_procs = self.rpc.supervisor.getAllProcessInfo()
-        self.log.info(all_procs)
+#        self.log.info(all_procs)
         for proc in all_procs:
             process_name = proc['name']
             pid = int(proc['pid'])
@@ -130,14 +130,14 @@ class Tick5Parser(EventParser):
 
 @baker.command
 def tick(host):
-    log = logging.getLogger('runner')
-    log.debug('command')
+#    log = logging.getLogger('runner')
+#    log.debug('command')
     try:
         parser = Tick5Parser(host, EXCHANGE)
 #        import pdb; pdb.set_trace()
         parser.run()
     except Exception, e:
-        log.exception(e)
+        pass#log.exception(e)
 
 def run():
     baker.run()

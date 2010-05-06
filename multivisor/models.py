@@ -9,14 +9,15 @@ from repoze.bfg.jinja2 import render_template
 from repoze.bfg.traversal import model_path
 from webob.response import Response
 from zope.interface import implements
-import os, sys, logging, pprint
+import os, sys, pprint
 import eventlet
 import errno
 
 from multivisor.amqp import connect_to_amqp, EXCHANGE, create_routing_key, deserialize_routing_key
 from multivisor.interfaces import *
 
-logger = logging.getLogger('mv.models')
+#logger = logging.getLogger('mv.models')
+#logger.setLevel(logging.DEBUG)
 
 class TreeNode(object):
 
@@ -243,7 +244,7 @@ class Process(SubTreeNode):
                                        process_info=process_info))
             self.send(dumps(message))
         except KeyError, e:
-            logger.error("%s: Malformed message %s" % (e, pprint.pformat(message)))
+            pass#logger.error("%s: Malformed message %s" % (e, pprint.pformat(message)))
 
     def add_ws_listener(self, ws):
         super(Process, self).add_ws_listener(ws)

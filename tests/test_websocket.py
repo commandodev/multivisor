@@ -17,9 +17,10 @@ from multivisor.interfaces import IWebsocketUpgradeRequest
 from multivisor.server.factory import server_factory
 from multivisor.server.websocket import WebSocketView, WebSocket
 
-from repoze.debug.responselogger import ResponseLoggingMiddleware
+#from repoze.debug.responselogger import ResponseLoggingMiddleware
 from logging import getLogger
 
+import logging
 import mock
 import random
 
@@ -73,7 +74,9 @@ class LimitedTestCase(TestCase):
 #        self.timer = Timeout(self.TEST_TIMEOUT,
 #                             TestIsTakingTooLong(self.TEST_TIMEOUT))
         config = testing.setUp()
-        config.begin()
+        #set_trace()
+        config_logger = getLogger("config")
+        config_logger.setLevel(logging.INFO)
         config.load_zcml('multivisor:configure.zcml')
         """<route
              path="/echo"
@@ -105,13 +108,6 @@ class LimitedTestCase(TestCase):
             greenthread.kill(self.killer)
             eventlet.sleep(0)
         app = self.config.make_wsgi_app()
-#        middleware = ResponseLoggingMiddleware(
-#               app,
-#               max_bodylen=3072,
-#               keep=100,
-#               verbose_logger=getLogger('verbose'),
-#               trace_logger=getLogger('trace'),
-#              )
         new_kwargs = dict(max_size=128,
                           log=self.logfile)
         new_kwargs.update(kwargs)
@@ -160,21 +156,6 @@ class LimitedTestCase(TestCase):
         eq_(resp['status'], '400')
         eq_(resp['connection'], 'Close')
         ok_(content.startswith('Bad:'))
-#        connect = [
-#                "GET /echo HTTP/1.1",
-#                "Upgrade: WebSocket",
-#                #"Connection: Upgrade", Without this should trigger the HTTPServerError
-#                "Host: localhost:%s" % self.port,
-#                "Origin: http://localhost:%s" % self.port,
-#                "WebSocket-Protocol: ws",
-#                ]
-#        sock = eventlet.connect(
-#            ('localhost', self.port))
-#        fd = sock.makefile('rw', close=True)
-#        fd.write('\r\n'.join(connect) + '\r\n\r\n')
-#        fd.flush()
-#        result = sock.recv(1024)
-#        eq_(result, '')
 
     def test_correct_upgrade_request(self):
         connect = [

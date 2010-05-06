@@ -25,7 +25,7 @@ h2.server {
     background-color: #282828;
 }
 .chart-wrapper {
-    height: 70px;
+    height: 100px;
     width: 250px;
     float: right;
 }
