@@ -1,22 +1,21 @@
 from eventlet import patcher
-import os
-childutils = patcher.import_patched('supervisor.childutils')
-from multivisor.amqp import connect_to_amqp, EXCHANGE, amqplib, create_routing_key
+from multivisor.amqp import (connect_to_amqp, EXCHANGE, amqplib,
+                             create_routing_key)
 from json import dumps
 from pprint import pformat
 import baker
 import psutil
-#import logging
-import os
 import socket
 import sys
+import os
+
+childutils = patcher.import_patched('supervisor.childutils')
 
 #logging.basicConfig(filename='/tmp/listener.log', level=logging.INFO)
 HOST = socket.gethostname()
 
-
 class WrongEventType(TypeError):
-    """An exception for an :class:`EventParser` trying to process the wrong supervisor event"""
+    """Raised by :class:`EventParser` trying to process the wrong event"""
 
 class EventParser(object):
     """Base class for handling supervisor events"""
@@ -24,14 +23,18 @@ class EventParser(object):
     #: The event type being listened to
     EVENT_NAME = 'EVENT'
 
+    #: A :class:`supervisor.childutils.EventListenerProtocol` instance
     PROTOCOL = childutils.EventListenerProtocol()
+
     #: The ``delivery_mode`` of messages (1 == Non persistent)
     DELIVERY_MODE = 1
+
     #: Message content_type
     CONTENT_TYPE = 'application/json'
 #    log = logging.getLogger('listener')
 
-    def __init__(self, amqp_host, exchange, stdin=sys.stdin, stdout=sys.stdout, **kwargs):
+    def __init__(self, amqp_host, exchange, stdin=sys.stdin, stdout=sys.stdout,
+                 **kwargs):
         self.amqp_host = amqp_host
         self.exchange = exchange
         self.stdin = stdin
@@ -41,15 +44,24 @@ class EventParser(object):
         self.channel = connect_to_amqp(amqp_host, exchange, **kwargs)
 
     def _get_rpc(self, env=os.environ):
+        """Gets an RPC client to talk to the supervisor instance"""
         return childutils.getRPCInterface(env)
 
     def ready(self):
+        """Wrapper around :attr:`PROTOCOL` ``ready`` method"""
         self.PROTOCOL.ready(self.stdout)
 
     def ok(self):
+        """Wrapper around :attr:`PROTOCOL` ``ok`` method"""
         self.PROTOCOL.ok(self.stdout)
 
     def wait(self):
+        """Wrapper around :attr:`PROTOCOL` ``wait`` method
+
+        Also uses :func:`supervisor.childutils.get_headers to process the
+        payload as the payload of an event is in the same format as the
+        headers
+        """
         headers, payload =  self.PROTOCOL.wait(self.stdin, self.stdout)
         return headers, childutils.get_headers(payload)
 
@@ -67,16 +79,28 @@ class EventParser(object):
         :param process_name: The name of the process
         :returns: 'hostname.supervisor_id.process_name.:attr:`event_name <EVENT_NAME>`'
         """
-        return create_routing_key(HOST, self.supervisor_id, process_name, self.EVENT_NAME)
+        return create_routing_key(HOST, self.supervisor_id, process_name,
+                                  self.EVENT_NAME)
 
     def dispatch_message(self, routing_key, message_body, content_type=None):
+        """Dispatches a message into amqp
+
+        :param routing_key: Where to dispatch the message
+        :type routing_key: string e.g. ``'localhost.supervisor.process.EVENT'``
+        :param message_body: The message to dispatch - will be json serialized
+        :type message_body: dict
+        :param content_type: Sets the content type of the message
+
+        .. note:: amqplib has been imported by eventet so this will be
+            non-blocking
+        """
         if not content_type:
             content_type = self.CONTENT_TYPE
         msg = amqplib.Message(dumps(message_body), content_type=content_type)
         self.channel.basic_publish(msg, self.exchange, routing_key)
 
     def run(self, test=False):
-#        self.log.debug('run')
+        """The main event loop that listens for supervisor events"""
         while 1:
             sys.stderr.write('tick')
             headers, payload = self.wait()
@@ -92,6 +116,7 @@ class EventParser(object):
 
 
 class Tick5Parser(EventParser):
+    """Listens for tick events and suppliments them with cpu/ram useage info"""
 
     EVENT_NAME = 'TICK'
     def __init__(self, *args, **kwargs):
@@ -101,9 +126,17 @@ class Tick5Parser(EventParser):
         self.count = 0
 
     def process_event(self, headers, payload):
-        if self.count % 5 == 0:
-            self.leak = []
-        self.leak.append(range(10000))
+        """Sends one message for each process running under supervisor
+
+        On every tick event runs ``getAllProcessInfo()`` and for each process
+        add CPU and memory usage info to the message
+        """
+
+
+#### A memory leak to make the ram usage go up over time
+#        if self.count % 5 == 0:
+#            self.leak = []
+#        self.leak.append(range(10000))
         all_procs = self.rpc.supervisor.getAllProcessInfo()
 #        self.log.info(all_procs)
         for proc in all_procs:
@@ -114,7 +147,7 @@ class Tick5Parser(EventParser):
             self.dispatch_message(routing_key, proc)
 
     def get_process_info(self, pid):
-#        ps = self.procs.setdefault(pid, psutil.Process(pid))
+        """Uses :class:`psutil.Process` to get RAM and CPU usage"""
         ps = psutil.Process(pid)
         try:
             rss, vms = ps.get_memory_info()
